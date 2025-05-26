@@ -1,0 +1,2585 @@
+// This grammar was converted from the IEEE 1800-2012 LRM specification (Annex A) to an ANt_lR4-style EBNF
+// https://standards.ieee.org/getieee/1800/download/1800-2012.pdf
+
+// grammar SystemVerilog;
+
+// A.1 - Source Text
+// A.1.1 - Library Source Text
+// Not implementing this section as we're only targeting SV source text
+
+
+// A.1.2 SystemVerilog Source Text
+source_text : (timeunits_declaration)? (description)*
+
+description : module_declaration
+            // | udp_declaration
+            | interface_declaration
+            | program_declaration
+            | package_declaration
+            | attribute_instance* package_item
+            | attribute_instance* bind_directive
+            | config_declaration
+
+module_nonansi_header : attribute_instance* module_keyword lifetime? module_identifier package_import_declaration* parameter_port_list? list_of_ports ";"
+
+module_ansi_header : attribute_instance* module_keyword lifetime? module_identifier package_import_declaration* parameter_port_list? list_of_port_declarations? ";"
+
+module_declaration : module_nonansi_header timeunits_declaration? module_item* t_endmodule (":" module_identifier)?
+                   | module_ansi_header timeunits_declaration? non_port_module_item* t_endmodule (":" module_identifier)?
+                   | attribute_instance* module_keyword lifetime? module_identifier "(" ".*" ")" ";" timeunits_declaration? module_item* t_endmodule (":" module_identifier)?
+                   | t_extern module_nonansi_header
+                   | t_extern module_ansi_header
+
+module_keyword : t_module
+               | t_macromodule
+
+interface_declaration : interface_nonansi_header timeunits_declaration? interface_item* t_endinterface (":" interface_identifier)?
+                      | interface_ansi_header timeunits_declaration? non_port_interface_item* t_endinterface (":" interface_identifier)?
+                      | attribute_instance* t_interface interface_identifier "(" ".*" ")" ";" timeunits_declaration? interface_item* t_endinterface (":" interface_identifier)?
+                      | t_extern interface_nonansi_header
+                      | t_extern interface_ansi_header
+
+interface_nonansi_header : attribute_instance* t_interface lifetime? interface_identifier package_import_declaration* parameter_port_list? list_of_ports ";"
+
+interface_ansi_header : attribute_instance? t_interface lifetime? interface_identifier package_import_declaration* parameter_port_list? list_of_port_declarations? ";"
+
+program_declaration : program_nonansi_header timeunits_declaration? program_item* t_endprogram (":" program_identifier)?
+                    | program_ansi_header timeunits_declaration? non_port_program_item* t_endprogram (":" program_identifier)?
+                    | attribute_instance* t_program program_identifier "(" ".*" ")" ";" ";" timeunits_declaration? program_item* t_endprogram (":" program_identifier)?
+                    | t_extern program_nonansi_header
+                    | t_extern program_ansi_header
+
+program_nonansi_header : attribute_instance* t_program lifetime? program_identifier package_import_declaration* parameter_port_list? list_of_ports ";"
+
+program_ansi_header : attribute_instance* t_program lifetime? program_identifier package_import_declaration* parameter_port_list? list_of_port_declarations? ";"
+
+checker_declaration : t_checker checker_identifier ("(" checker_port_list? ")")? ";" (attribute_instance* checker_or_generate_item)* t_endchecker (":" checker_identifier)?
+
+class_declaration : t_virtual? t_class lifetime? class_identifier parameter_port_list? (t_extends class_type ("(" list_of_arguments ")")?)? (t_implements interface_class_type ("," interface_class_type)*)? ";" class_item* t_endclass (":" class_identifier)?
+
+interface_class_type : ps_class_identifier parameter_value_assignment?
+
+interface_class_declaration : t_interface t_class class_identifier parameter_port_list? (t_extends interface_class_type ("," interface_class_type)*)? ";" interface_class_item* t_endclass (":" class_identifier)?
+
+interface_class_item : type_declaration
+                     | attribute_instance* interface_class_method
+                     | local_parameter_declaration ";"
+                     | parameter_declaration ";"
+                     | ";"
+
+interface_class_method : t_pure t_virtual method_prototype ";"
+
+package_declaration : attribute_instance* t_package lifetime? package_identifier ";" timeunits_declaration? (attribute_instance* package_item)* t_endpackage (":" package_identifier)?
+
+timeunits_declaration : t_timeunit time_literal ("/" time_literal)? ";"
+                      | t_timeprecision time_literal ";"
+                      | t_timeunit time_literal ";" t_timeprecision time_literal ";"
+                      | t_timeprecision time_literal ";" t_timeunit time_literal ";"
+
+
+// A.1.3 - Module Ports
+parameter_port_list : "#" "(" list_of_param_assignments ("," parameter_port_declaration)* ")"
+                    | "#" "(" parameter_port_declaration ("," parameter_port_declaration)* ")"
+                    | "#" "(" ")"
+
+parameter_port_declaration : parameter_declaration
+                           | local_parameter_declaration
+                           | data_type list_of_param_assignments
+                           | t_type list_of_type_assignments
+
+list_of_ports : "(" port ("," port)* ")"
+
+list_of_port_declarations : "(" (attribute_instance* ansi_port_declaration ("," attribute_instance* ansi_port_declaration)*)? ")"
+
+port_declaration : attribute_instance* inout_declaration
+                 | attribute_instance* input_declaration
+                 | attribute_instance* output_declaration
+                 | attribute_instance* ref_declaration
+                 | attribute_instance* interface_port_declaration
+
+port : port_expression
+     | "." port_identifier "(" port_expression ")"
+
+port_expression : (port_reference ("," port_reference)*)*
+
+port_reference : port_identifier constant_select
+
+port_direction : t_input
+               | t_output
+               | t_inout
+               | t_ref
+
+net_port_header : port_direction? net_port_type
+
+variable_port_header : port_direction? variable_port_type
+
+interface_port_header : interface_identifier ("." modport_identifier)?
+                      | t_interface ("." modport_identifier)?
+
+ansi_port_declaration : (net_port_header | interface_port_header) port_identifier unpacked_dimension* ("=" constant_expression)?
+                      | variable_port_header? port_identifier variable_dimension* ("=" constant_expression)?
+                      | port_direction? "." port_identifier "(" expression? ")"
+
+
+// A.1.4 - Module Items
+elaboration_system_task : "$fatal" ("(" finish_number ("," list_of_arguments)? ")")? ";"
+                        | "$error" ("(" list_of_arguments ")")? ";"
+                        | "$warning" ("(" list_of_arguments ")")? ";"
+                        | "$info" ("(" list_of_arguments ")")? ";"
+
+finish_number : "0"
+              | "1"
+              | "2"
+
+module_common_item : module_or_generate_item_declaration
+                   | interface_instantiation
+                   | program_instantiation
+                   | assertion_item
+                   | bind_directive
+                   | continuous_assign
+                   | net_alias
+                   | initial_construct
+                   | final_construct
+                   | always_construct
+                   | loop_generate_construct
+                   | conditional_generate_construct
+                   | elaboration_system_task
+
+module_item : port_declaration ";"
+            | non_port_module_item
+
+module_or_generate_item : attribute_instance* parameter_override
+                        // | attribute_instance* gate_instantiation
+                        // | attribute_instance* udp_instantiation
+                        | attribute_instance* module_instantiation
+                        | attribute_instance* module_common_item
+
+module_or_generate_item_declaration : package_or_generate_item_declaration
+                                    | genvar_declaration
+                                    | clocking_declaration
+                                    | t_default t_clocking clocking_identifier ";"
+                                    | t_default t_disable t_iff expression_or_dist ";"
+
+non_port_module_item : generate_region
+                     | module_or_generate_item
+                     // | specify_block
+                     | attribute_instance* specparam_declaration
+                     | program_declaration
+                     | module_declaration
+                     | interface_declaration
+                     | timeunits_declaration
+
+parameter_override : t_defparam list_of_defparam_assignments ";"
+
+bind_directive : t_bind bind_target_scope (":" bind_target_instance_list)? bind_instantiation ";"
+               | t_bind bind_target_instance bind_instantiation ";"
+
+bind_target_scope : module_identifier
+                  | interface_identifier
+
+bind_target_instance : hierarchical_identifier constant_bit_select
+
+bind_target_instance_list : bind_target_instance ("," bind_target_instance)*
+
+bind_instantiation : program_instantiation
+                   | module_instantiation
+                   | interface_instantiation
+                   | checker_instantiation
+
+
+// A.1.5 - Configuration
+config_declaration : t_config config_identifier ";" (local_parameter_declaration ";")* design_statement config_rule_statement* t_endconfig (":" config_identifier)?
+
+design_statement : t_design ((library_identifier ".")? cell_identifier)* ";"
+
+config_rule_statement : default_clause liblist_clause ";"
+                      | inst_clause liblist_clause ";"
+                      | inst_clause use_clause ";"
+                      | cell_clause liblist_clause ";"
+                      | cell_clause use_clause ";"
+
+default_clause : t_default
+
+inst_clause : t_instance inst_name
+
+inst_name : topmodule_identifier ("." instance_identifier)*
+
+cell_clause : t_cell (library_identifier ".")? cell_identifier
+
+liblist_clause : t_liblist library_identifier*
+
+use_clause : t_use (library_identifier ".")? cell_identifier (":" t_config)?
+           | t_use named_parameter_assignment ("," named_parameter_assignment)* (":" t_config)?
+           | t_use (library_identifier ".")? cell_identifier named_parameter_assignment ("," named_parameter_assignment)* (":" t_config)?
+
+
+// A.1.6 - Interface Items
+interface_or_generate_item : attribute_instance* module_common_item
+                           | attribute_instance* modport_declaration
+                           | attribute_instance* extern_tf_declaration
+
+extern_tf_declaration : t_extern method_prototype ";"
+                      | t_extern t_forkjoin task_prototype ";"
+
+interface_item : port_declaration ";"
+               | non_port_interface_item
+
+non_port_interface_item : generate_region
+                        | interface_or_generate_item
+                        | program_declaration
+                        | interface_declaration
+                        | timeunits_declaration
+
+
+// A.1.7 - Program Items
+program_item : port_declaration ";"
+             | non_port_program_item
+
+non_port_program_item : attribute_instance* continuous_assign
+                      | attribute_instance* module_or_generate_item_declaration
+                      | attribute_instance* initial_construct
+                      | attribute_instance* final_construct
+                      | attribute_instance* concurrent_assertion_item
+                      | timeunits_declaration
+                      | program_generate_item
+
+program_generate_item : loop_generate_construct
+                      | conditional_generate_construct
+                      | generate_region
+                      | elaboration_system_task
+
+
+// A.1.8 - Checker Items
+checker_port_list : checker_port_item ("," checker_port_item)*
+
+checker_port_item : attribute_instance* checker_port_direction? property_formal_type formal_port_identifier variable_dimension* ("=" property_actual_arg)?
+
+checker_port_direction : t_input
+                       | t_output
+
+checker_or_generate_item : checker_or_generate_item_declaration
+                         | initial_construct
+                         | always_construct
+                         | final_construct
+                         | assertion_item
+                         | continuous_assign
+                         | checker_generate_item
+
+checker_or_generate_item_declaration : t_rand? data_declaration
+                                     | function_declaration
+                                     | checker_declaration
+                                     | assertion_item_declaration
+                                     | covergroup_declaration
+                                     | overload_declaration
+                                     | genvar_declaration
+                                     | clocking_declaration
+                                     | t_default t_clocking clocking_identifier ";"
+                                     | t_default t_disable t_iff expression_or_dist ";"
+                                     | ";"
+
+checker_generate_item : loop_generate_construct
+                      | conditional_generate_construct
+                      | generate_region
+                      | elaboration_system_task
+
+
+// A.1.9 - Class Items
+class_item : attribute_instance* class_property
+           | attribute_instance* class_method
+           | attribute_instance* class_constraint
+           | attribute_instance* class_declaration
+           | attribute_instance* covergroup_declaration
+           | local_parameter_declaration ";"
+           | parameter_declaration ";"
+           | ";"
+
+class_property : property_qualifier* data_declaration
+               | t_const class_item_qualifier* data_type const_identifier ("=" constant_expression)? ";"
+
+class_method : method_qualifier* task_declaration
+             | method_qualifier* function_declaration
+             | t_pure t_virtual class_item_qualifier* method_prototype ";"
+             | t_extern method_qualifier* method_prototype ";"
+             | method_qualifier* class_constructor_declaration
+             | t_extern method_qualifier* class_constructor_prototype
+
+class_constructor_prototype : t_function t_new ("(" tf_port_list ")")? ";"
+
+class_constraint : constraint_prototype
+                 | constraint_declaration
+
+class_item_qualifier : t_static
+                     | t_protected
+                     | t_local
+
+property_qualifier : random_qualifier
+                   | class_item_qualifier
+
+random_qualifier : t_rand
+                 | t_randc
+
+method_qualifier : t_pure? t_virtual
+                 | class_item_qualifier
+
+method_prototype : task_prototype
+                 | function_prototype
+
+class_constructor_declaration : t_function class_scope? t_new ("(" tf_port_list ")")? ";" block_item_declaration* (t_super "." t_new ("(" list_of_arguments ")")? ";")? function_statement_or_null* t_endfunction (":" t_new)?
+
+
+// A.1.10 - Constraints
+constraint_declaration : t_static? t_constraint constraint_identifier constraint_block
+
+constraint_block : "{" constraint_block_item* "}"
+
+constraint_block_item : t_solve solve_before_list t_before solve_before_list ";"
+                      | constraint_expression
+
+solve_before_list : constraint_primary ("," constraint_primary)*
+
+constraint_primary : (implicit_class_handle "." | class_scope)? hierarchical_identifier select
+
+constraint_expression : t_soft? expression_or_dist ";"
+                      | uniqueness_constraint ";"
+                      | expression "->" constraint_set
+                      | t_if "(" expression ")" constraint_set (t_else constraint_set)?
+                      | t_foreach "(" ps_or_hierarchical_array_identifier "[" loop_variables "]" ")" constraint_set
+                      | t_disable t_soft constraint_primary ";"
+
+uniqueness_constraint : t_unique open_range_list*
+
+constraint_set : constraint_expression
+               | "{" constraint_expression* "}"
+
+dist_list : dist_item ("," dist_item)*
+
+dist_item : value_range dist_weight?
+
+dist_weight : ":=" expression
+            | ":/" expression
+
+constraint_prototype : constraint_prototype_qualifier? t_static? t_constraint constraint_identifier ";"
+
+constraint_prototype_qualifier : t_extern
+                               | t_pure
+
+extern_constraint_declaration : t_static t_constraint class_scope constraint_identifier constraint_block
+
+identifier_list : identifier ("," identifier)*
+
+
+// A.1.11 - Package Items
+package_item : package_or_generate_item_declaration
+             | anonymous_program
+             | package_export_declaration
+             | timeunits_declaration
+
+package_or_generate_item_declaration : net_declaration
+                                     | data_declaration
+                                     | task_declaration
+                                     | function_declaration
+                                     | checker_declaration
+                                     | dpi_import_export
+                                     | extern_constraint_declaration
+                                     | class_declaration
+                                     | class_constructor_declaration
+                                     | local_parameter_declaration ";"
+                                     | parameter_declaration ";"
+                                     | covergroup_declaration
+                                     | overload_declaration
+                                     | assertion_item_declaration
+                                     | ";"
+
+anonymous_program : t_program ";" anonymous_program_item* t_endprogram
+
+anonymous_program_item : task_declaration
+                       | function_declaration
+                       | class_declaration
+                       | covergroup_declaration
+                       | class_constructor_declaration
+                       | ";"
+
+
+// A.2 - Declarations
+// A.2.1 - Declaration Types
+// A.2.1.1 - Module Parameter Declarations
+local_parameter_declaration : t_localparam data_type_or_implicit list_of_param_assignments
+                            | t_localparam t_type list_of_type_assignments
+
+parameter_declaration : t_parameter data_type_or_implicit list_of_param_assignments
+                      | t_parameter t_type list_of_type_assignments
+
+specparam_declaration : t_specparam packed_dimension? list_of_specparam_assignments ";"
+
+
+// A.2.1.2 - Port Declarations
+inout_declaration : t_inout net_port_type list_of_port_identifiers
+
+input_declaration : t_input net_port_type list_of_port_identifiers
+                  | t_input variable_port_type list_of_variable_identifiers
+
+output_declaration : t_output net_port_type list_of_port_identifiers
+                   | t_output variable_port_type list_of_variable_port_identifiers
+
+interface_port_declaration : interface_identifier list_of_interface_identifiers
+                           | interface_identifier "." modport_identifier list_of_interface_identifiers
+
+ref_declaration : t_ref variable_port_type list_of_variable_identifiers
+
+
+// A.2.1.3 - Type Declarations
+data_declaration : t_const? t_var? lifetime? data_type_or_implicit list_of_variable_decl_assignments ";"
+                 | type_declaration
+                 | package_import_declaration net_type_declaration
+
+package_import_declaration : t_import package_import_item ("," package_import_item)* ";"
+
+package_import_item : package_identifier "::" identifier | package_identifier "::" "*"
+
+package_export_declaration : t_export "*::*" ";"
+                           | t_export package_import_item ("," package_import_item)* ";"
+
+genvar_declaration : t_genvar list_of_genvar_identifiers ";"
+
+net_declaration : net_type (drive_strength | charge_strength)? (t_vectored | t_scalared)? data_type_or_implicit delay3? list_of_net_decl_assignments ";"
+                | net_type_identifier delay_control? list_of_net_decl_assignments ";"
+                | t_interconnect implicit_data_type ("#" delay_value)? net_identifier unpacked_dimension* ("," net_identifier unpacked_dimension*)? ";"
+
+type_declaration : t_typedef data_type type_identifier variable_dimension* ";"
+                 | t_typedef interface_instance_identifier constant_bit_select "." type_identifier type_identifier ";"
+                 | t_typedef (t_enum | t_struct | t_union | t_class | t_interface t_class)? type_identifier ";"
+
+net_type_declaration : t_nettype data_type net_type_identifier (t_with (package_scope | class_scope)? tf_identifier)? ";"
+                     | t_nettype (package_scope | class_scope)? net_type_identifier net_type_identifier ";"
+
+lifetime : t_static
+         | t_automatic
+
+
+// A.2.2 - Declaration Data Types
+// A.2.2.1 - Net and Variable Types
+casting_type : simple_type
+             | constant_primary
+             | signing
+             | t_string
+             | t_const
+
+data_type : integer_vector_type signing? packed_dimension*
+          | integer_atom_type signing?
+          | non_integer_type
+          | struct_union (t_packed signing?)? (struct_union_member struct_union_member*)* packed_dimension*
+          | t_enum enum_base_type? (enum_name_declaration ("," enum_name_declaration)*)* packed_dimension*
+          | t_string
+          | t_chandle
+          | t_virtual t_interface? interface_identifier parameter_value_assignment? ("." modport_identifier)?
+          | (class_scope | package_scope)? type_identifier packed_dimension*
+          | class_type
+          | t_event
+          | ps_covergroup_identifier
+          | type_reference
+
+data_type_or_implicit : data_type
+                      | implicit_data_type
+
+implicit_data_type : signing? packed_dimension*
+
+enum_base_type : integer_atom_type signing?
+               | integer_vector_type signing? packed_dimension?
+               | type_identifier packed_dimension?
+
+enum_name_declaration : enum_identifier ("[" integral_number (":" integral_number)? "]")? ("=" constant_expression)?
+
+class_scope : class_type "::"
+
+class_type : ps_class_identifier parameter_value_assignment? ("::" class_identifier parameter_value_assignment?)*
+
+integer_type : integer_vector_type
+             | integer_atom_type
+
+integer_atom_type : t_byte
+                  | t_shortint
+                  | t_int
+                  | t_longint
+                  | t_integer
+                  | t_time
+
+integer_vector_type : t_bit
+                    | t_logic
+                    | t_reg
+
+non_integer_type : t_shortreal
+                 | t_real
+                 | t_realtime
+
+net_type : t_supply0
+         | t_supply1
+         | t_tri
+         | t_triand
+         | t_trior
+         | t_trireg
+         | t_tri0
+         | t_tri1
+         | t_uwire
+         | t_wire
+         | t_wand
+         | t_wor
+
+net_port_type : net_type? data_type_or_implicit
+              | net_type_identifier
+              | t_interconnect implicit_data_type
+
+variable_port_type : var_data_type
+
+var_data_type : data_type
+              | t_var data_type_or_implicit
+
+signing : t_signed
+        | t_unsigned
+
+simple_type : integer_type
+            | non_integer_type
+            | ps_type_identifier
+            | ps_parameter_identifier
+
+struct_union_member : attribute_instance* random_qualifier? data_type_or_void list_of_variable_decl_assignments ";"
+
+data_type_or_void : data_type
+                  | t_void
+
+struct_union : t_struct
+             | t_union t_tagged?
+
+type_reference : t_type "(" expression ")"
+               | t_type "(" data_type ")"
+
+
+// A.2.2.2 - Strengths
+drive_strength : "(" strength0 "," strength1 ")"
+               | "(" strength1 "," strength0 ")"
+               | "(" strength0 "," t_highz1 ")"
+               | "(" strength1 "," t_highz0 ")"
+               | "(" t_highz0 "," strength1 ")"
+               | "(" t_highz1 "," strength0 ")"
+
+strength0 : t_supply0
+          | t_strong0
+          | t_pull0
+          | t_weak0
+
+strength1 : t_supply1
+          | t_strong1
+          | t_pull1
+          | t_weak1
+
+charge_strength : "(" t_small ")"
+                | "(" t_medium ")"
+                | "(" t_large ")"
+
+
+// A.2.2.3 - Delays
+delay3 : "#" delay_value
+       | "#" "(" mintypmax_expression ("," mintypmax_expression ("," mintypmax_expression)?)? ")"
+
+delay2 : "#" delay_value
+       | "#" "(" mintypmax_expression ("," mintypmax_expression)? ")"
+
+delay_value : unsigned_number
+            | real_number
+            | ps_identifier
+            | time_literal
+            | t_1step
+
+
+// A.2.3 - Declaration Lists
+list_of_defparam_assignments : defparam_assignment ("," defparam_assignment)*
+
+list_of_genvar_identifiers : genvar_identifier ("," genvar_identifier)*
+
+list_of_interface_identifiers : interface_identifier unpacked_dimension* ("," interface_identifier unpacked_dimension*)*
+
+list_of_net_decl_assignments : net_decl_assignment ("," net_decl_assignment)*
+
+list_of_param_assignments : param_assignment ("," param_assignment)*
+
+list_of_port_identifiers : port_identifier unpacked_dimension* ("," port_identifier unpacked_dimension*)*
+
+list_of_udp_port_identifiers : port_identifier ("," port_identifier)*
+
+list_of_specparam_assignments : specparam_assignment ("," specparam_assignment)*
+
+list_of_tf_variable_identifiers : port_identifier variable_dimension* ("=" expression)? ("," port_identifier variable_dimension* ("=" expression)?)*
+
+list_of_type_assignments : type_assignment ("," type_assignment)*
+
+list_of_variable_decl_assignments : variable_decl_assignment ("," variable_decl_assignment)*
+
+list_of_variable_identifiers : variable_identifier variable_dimension* ("," variable_identifier variable_dimension*)*
+
+list_of_variable_port_identifiers : port_identifier variable_dimension* ("=" constant_expression)? ("," port_identifier variable_dimension* ("=" constant_expression)?)*
+
+
+// A.2.4 - Declaration Assignments
+defparam_assignment : hierarchical_parameter_identifier "=" constant_mintypmax_expression
+
+net_decl_assignment : net_identifier unpacked_dimension* ("=" expression)?
+
+param_assignment : parameter_identifier unpacked_dimension* ("=" constant_param_expression)?
+
+specparam_assignment : specparam_identifier "=" constant_mintypmax_expression
+                     | pulse_control_specparam
+
+type_assignment : type_identifier ("=" data_type)?
+
+pulse_control_specparam : t_pathpulse "=" "(" reject_limit_value ("," error_limit_value)? ")"
+                        // | t_pathPulse specify_input_terminal_descriptor "$" specify_output_terminal_descriptor "=" "(" reject_limit_value ("," error_limit_value)? ")"
+
+error_limit_value : limit_value
+
+reject_limit_value : limit_value
+
+limit_value : constant_mintypmax_expression
+
+variable_decl_assignment : variable_identifier variable_dimension* ("=" expression)?
+                         | dynamic_array_variable_identifier unsized_dimension variable_dimension* ("=" dynamic_array_new)?
+                         | class_variable_identifier ("=" class_new)?
+
+class_new : class_scope? t_new ("(" list_of_arguments ")")?
+          | t_new expression
+
+dynamic_array_new : t_new expression? ("(" expression ")")?
+
+
+// A.2.5 - Declaration Ranges
+unpacked_dimension : "[" constant_range "]"
+                   | "[" constant_expression "]"
+
+packed_dimension : "[" constant_range "]"
+                 | unsized_dimension
+
+associative_dimension : "[" data_type "]"
+                      | "[" "*" "]"
+
+variable_dimension : unsized_dimension
+                   | unpacked_dimension
+                   | associative_dimension
+                   | queue_dimension
+
+queue_dimension : "[" "$" (":" constant_expression)? "]"
+
+unsized_dimension : "[" "]"
+
+
+// A.2.6 - Function Declarations
+function_data_type_or_implicit : data_type_or_void
+                               | implicit_data_type
+
+function_declaration : t_function lifetime? function_body_declaration
+
+function_body_declaration : function_data_type_or_implicit (interface_identifier "." | class_scope)? function_identifier ";" tf_item_declaration* function_statement_or_null* t_endfunction (":" function_identifier)?
+                          | function_data_type_or_implicit (interface_identifier "." | class_scope)? function_identifier "(" tf_port_list ")" ";" block_item_declaration* function_statement_or_null* t_endfunction (":" function_identifier)?
+
+function_prototype : t_function data_type_or_void function_identifier ("(" tf_port_list ")")?
+
+dpi_import_export : t_import dpi_spec_string dpi_function_import_property? (c_identifier "=")? dpi_function_proto ";"
+                  | t_import dpi_spec_string dpi_task_import_property? (c_identifier "=")? dpi_task_proto ";"
+                  | t_export dpi_spec_string (c_identifier "=")? t_function function_identifier ";"
+                  | t_export dpi_spec_string (c_identifier "=")? t_task task_identifier ";"
+
+dpi_spec_string : t_dpic
+                | t_dpi
+
+dpi_function_import_property : t_context
+                             | t_pure
+
+dpi_task_import_property : t_context
+
+dpi_function_proto : function_prototype
+
+dpi_task_proto : task_prototype
+
+
+// A.2.7 - Task Declarations
+task_declaration : t_task lifetime? task_body_declaration
+
+task_body_declaration : (interface_identifier "." | class_scope)? task_identifier ";" tf_item_declaration* statement_or_null* t_endtask (":" task_identifier)?
+                      | (interface_identifier "." | class_scope)? task_identifier "(" tf_port_list ")" ";" block_item_declaration* statement_or_null* t_endtask (":" task_identifier)?
+
+tf_item_declaration : block_item_declaration
+                    | tf_port_declaration
+
+tf_port_list : tf_port_item ("," tf_port_item)*
+
+tf_port_item : attribute_instance* tf_port_direction? t_var? data_type_or_implicit (port_identifier variable_dimension* ("=" expression)?)?
+
+tf_port_direction : port_direction
+                  | t_const t_ref
+
+tf_port_declaration : attribute_instance* tf_port_direction t_var? data_type_or_implicit list_of_tf_variable_identifiers ";"
+
+task_prototype : t_task task_identifier ("(" tf_port_list ")")?
+
+
+// A.2.8 - Block Item Declarations
+block_item_declaration : attribute_instance* data_declaration
+                       | attribute_instance* local_parameter_declaration ";"
+                       | attribute_instance* parameter_declaration ";"
+                       | attribute_instance* overload_declaration
+                       | attribute_instance* let_declaration
+
+overload_declaration : t_bind overload_operator t_function data_type function_identifier "(" overload_proto_formals ")" ";"
+
+overload_operator : "+"
+                  | "++"
+                  | "-"
+                  | "--"
+                  | "*"
+                  | "**"
+                  | "/"
+                  | "%"
+                  | "=="
+                  | "!="
+                  | "<"
+                  | "<="
+                  | ">"
+                  | ">="
+                  | "="
+
+overload_proto_formals : data_type ("," data_type)*
+
+
+// A.2.9 - Interface Declarations
+modport_declaration : t_modport modport_item ("," modport_item)* ";"
+
+modport_item : modport_identifier "(" modport_ports_declaration ("," modport_ports_declaration)* ")"
+
+modport_ports_declaration : attribute_instance* modport_simple_ports_declaration
+                          | attribute_instance* modport_tf_ports_declaration
+                          | attribute_instance* modport_clocking_declaration
+
+modport_clocking_declaration : t_clocking clocking_identifier
+
+modport_simple_ports_declaration : port_direction modport_simple_port ("," modport_simple_port)*
+
+modport_simple_port : port_identifier
+                    | "." port_identifier "(" expression? ")"
+
+modport_tf_ports_declaration : import_export modport_tf_port ("," modport_tf_port)*
+
+modport_tf_port : method_prototype
+                | tf_identifier
+
+import_export : t_import
+              | t_export
+
+
+// A.2.10 - Assertion Declarations
+concurrent_assertion_item : (block_identifier ":")? concurrent_assertion_statement
+                          | checker_instantiation
+
+concurrent_assertion_statement : assert_property_statement
+                               | assume_property_statement
+                               | cover_property_statement
+                               | cover_sequence_statement
+                               | restrict_property_statement
+
+assert_property_statement : t_assert t_property "(" property_spec ")" action_block
+
+assume_property_statement : t_assume t_property "(" property_spec ")" action_block
+
+cover_property_statement : t_cover t_property "(" property_spec ")" statement_or_null
+
+expect_property_statement : t_expect "(" property_spec ")" action_block
+
+cover_sequence_statement : t_cover t_sequence "(" clocking_event? (t_disable t_iff "(" expression_or_dist ")")? sequence_expr ")" statement_or_null
+
+restrict_property_statement : t_restrict t_property "(" property_spec ")" ";"
+
+property_instance : ps_or_hierarchical_property_identifier ("(" property_list_of_arguments ")")?
+
+property_list_of_arguments : property_actual_arg? ("," property_actual_arg?)* ("," "." identifier "(" property_actual_arg? ")")*
+                           | "." identifier "(" property_actual_arg? ")" ("," "." identifier "(" property_actual_arg? ")")*
+
+property_actual_arg : property_expr
+                    | sequence_actual_arg
+
+assertion_item_declaration : property_declaration
+                           | sequence_declaration
+                           | let_declaration
+
+property_declaration : t_property property_identifier ("(" property_port_list? ")")? ";" assertion_variable_declaration* property_spec ";"? t_endproperty (":" property_identifier)?
+
+property_port_list : property_port_item ("," property_port_item)*
+
+property_port_item : attribute_instance* (t_local property_lvar_port_direction?)? property_formal_type formal_port_identifier variable_dimension* ("=" property_actual_arg)?
+
+property_lvar_port_direction : t_input
+
+property_formal_type : sequence_formal_type
+                     | t_property
+
+property_spec : clocking_event? (t_disable t_iff "(" expression_or_dist ")")? property_expr
+
+property_expr : sequence_expr
+              | t_strong "(" sequence_expr ")"
+              | t_weak "(" sequence_expr ")"
+              | "(" property_expr ")"
+              | t_not property_expr
+              | property_expr t_or property_expr
+              | property_expr t_and property_expr
+              | sequence_expr "|->" property_expr
+              | sequence_expr "|=>" property_expr
+              | t_if "(" expression_or_dist ")" property_expr (t_else property_expr)?
+              | t_case "(" expression_or_dist ")" property_case_item property_case_item* t_endcase
+              | sequence_expr "#-#" property_expr
+              | sequence_expr "#=#" property_expr
+              | t_nexttime property_expr
+              | t_nexttime "[" constant_expression "]" property_expr
+              | t_s_nexttime property_expr
+              | t_s_nexttime "[" constant_expression "]" property_expr
+              | t_always property_expr
+              | t_always "[" cycle_delay_const_range_expression "]" property_expr
+              | t_s_always "[" constant_range "]" property_expr
+              | t_s_eventually property_expr
+              | t_eventually "[" constant_range "]" property_expr
+              | t_s_eventually "[" cycle_delay_const_range_expression "]" property_expr
+              | property_expr t_until property_expr
+              | property_expr t_s_until property_expr
+              | property_expr t_s_until_with property_expr
+              | property_expr t_s_until_with property_expr
+              | property_expr t_implies property_expr
+              | property_expr t_iff property_expr
+              | t_accept_on "(" expression_or_dist ")" property_expr
+              | t_reject_on "(" expression_or_dist ")" property_expr
+              | t_sync_accept_on "(" expression_or_dist ")" property_expr
+              | t_sync_reject_on "(" expression_or_dist ")" property_expr
+              | property_instance
+              | clocking_event property_expr
+
+property_case_item : expression_or_dist ("," expression_or_dist)* ":" property_expr ";"?
+                   | t_default ":"? property_expr ";"?
+
+sequence_declaration : t_sequence sequence_identifier ("(" sequence_port_list? ")")? ";" assertion_variable_declaration* sequence_expr ";"? t_endsequence (":" sequence_identifier)?
+
+sequence_port_list : sequence_port_item ("," sequence_port_item)*
+
+sequence_port_item : attribute_instance* (t_local sequence_lvar_port_direction?)? sequence_formal_type formal_port_identifier variable_dimension* ("=" sequence_actual_arg)?
+
+sequence_lvar_port_direction : t_input
+                             | t_inout
+                             | t_output
+
+sequence_formal_type : data_type_or_implicit
+                     | t_sequence
+                     | t_untyped
+
+sequence_expr : cycle_delay_range sequence_expr cycle_delay_range sequence_expr*
+              | sequence_expr cycle_delay_range sequence_expr cycle_delay_range sequence_expr*
+              | expression_or_dist boolean_abbrev?
+              | sequence_instance sequence_abbrev?
+              | "(" sequence_expr ("," sequence_match_item)* ")" sequence_abbrev?
+              | sequence_expr t_and sequence_expr
+              | sequence_expr t_intersect sequence_expr
+              | sequence_expr t_or sequence_expr
+              | t_first_match "(" sequence_expr ("," sequence_match_item)* ")"
+              | expression_or_dist t_throughout sequence_expr
+              | sequence_expr t_within sequence_expr
+              | clocking_event sequence_expr
+
+cycle_delay_range : "##" constant_primary
+                  | "##" "[" cycle_delay_const_range_expression "]"
+                  | "##[*]"
+                  | "##[+]"
+
+sequence_method_call : sequence_instance "." method_identifier
+
+sequence_match_item : operator_assignment
+                    | inc_or_dec_expression
+                    | subroutine_call
+
+sequence_instance : ps_or_hierarchical_sequence_identifier ("(" sequence_list_of_arguments ")")?
+
+sequence_list_of_arguments : sequence_actual_arg? ("," sequence_actual_arg?)* ("," "." identifier "(" sequence_actual_arg? ")")*
+                           | "." identifier "(" sequence_actual_arg? ")" ("," "." identifier "(" sequence_actual_arg? ")")*
+
+sequence_actual_arg : event_expression
+                    | sequence_expr
+
+boolean_abbrev : consecutive_repetition
+               | non_consecutive_repetition
+               | goto_repetition
+
+sequence_abbrev : consecutive_repetition
+
+consecutive_repetition : "[*" const_or_range_expression "]"
+                       | "[*]"
+                       | "[+]"
+
+non_consecutive_repetition : "[=" const_or_range_expression "]"
+
+goto_repetition : "[->" const_or_range_expression "]"
+
+const_or_range_expression : constant_expression
+                          | cycle_delay_const_range_expression
+
+cycle_delay_const_range_expression : constant_expression ":" constant_expression
+                                   | constant_expression ":" "$"
+
+expression_or_dist : expression (t_dist dist_list*)?
+
+assertion_variable_declaration : var_data_type list_of_variable_decl_assignments ";"
+
+let_declaration : t_let let_identifier ("(" let_port_list? ")")? "=" expression ";"
+
+?let_identifier : identifier
+
+let_port_list : let_port_item ("," let_port_item)*
+
+let_port_item : attribute_instance* let_formal_type formal_port_identifier variable_dimension* ("=" expression)?
+
+let_formal_type : data_type_or_implicit
+                | t_untyped
+
+let_expression : package_scope? let_identifier ("(" let_list_of_arguments ")")?
+
+let_list_of_arguments : let_actual_arg? ("," let_actual_arg?)* ("," "." identifier "(" let_actual_arg? ")")*
+                      | "." identifier "(" let_actual_arg? ")" ("," "." identifier "(" let_actual_arg? ")")*
+
+let_actual_arg : expression
+
+// A.2.11 - Covergroup Declarations
+covergroup_declaration : t_covergroup covergroup_identifier ("(" tf_port_list ")")? coverage_event? ";" coverage_spec_or_option* t_endgroup (":" covergroup_identifier)?
+
+coverage_spec_or_option : attribute_instance* coverage_spec
+                        | attribute_instance* coverage_option ";"
+
+coverage_option : t_option "." member_identifier "=" expression
+                | t_type_option "." member_identifier "=" constant_expression
+
+coverage_spec : cover_point
+              | cover_cross
+
+coverage_event : clocking_event
+               | t_with t_function t_sample "(" tf_port_list ")"
+               | "@@" "(" block_event_expression ")"
+
+block_event_expression : block_event_expression t_or block_event_expression
+                       | t_begin hierarchical_btf_identifier
+                       | t_end hierarchical_btf_identifier
+
+hierarchical_btf_identifier : hierarchical_tf_identifier
+                            | hierarchical_block_identifier
+                            | (hierarchical_identifier "." | class_scope)? method_identifier
+
+cover_point : (data_type_or_implicit cover_point_identifier ":")? t_coverpoint expression (t_iff "(" expression ")")? bins_or_empty
+
+bins_or_empty : "{" attribute_instance* (bins_or_options ";")* "}"
+              | ";"
+
+bins_or_options : coverage_option
+                | t_wildcard? bins_keyword bin_identifier ("[" covergroup_expression? "]")? "=" "{" covergroup_range_list "}" (t_with "(" with_covergroup_expression ")")? (t_iff "(" expression ")")?
+                | t_wildcard? bins_keyword bin_identifier ("[" covergroup_expression? "]")? "=" cover_point_identifier (t_with "(" with_covergroup_expression ")")? (t_iff "(" expression ")")?
+                | t_wildcard? bins_keyword bin_identifier ("[" covergroup_expression? "]")? "=" set_covergroup_expression (t_iff "(" expression ")")?
+                | t_wildcard? bins_keyword bin_identifier ("[" "]")? "=" trans_list (t_iff "(" expression ")")?
+                | bins_keyword bin_identifier ("[" covergroup_expression? "]")? "=" t_default (t_iff "(" expression ")")?
+                | bins_keyword bin_identifier "=" t_default t_sequence (t_iff "(" expression ")")?
+
+bins_keyword : t_bins
+             | t_illegal_bins
+             | t_ignore_bins
+
+
+trans_list : "(" trans_set ")" ("," "(" trans_set ")")*
+
+trans_set : trans_range_list ("=>" trans_range_list)*
+
+trans_range_list : trans_item
+                 | trans_item "[*" repeat_range "]"
+                 | trans_item "[->" repeat_range "]"
+                 | trans_item "[=" repeat_range "]"
+
+trans_item : covergroup_range_list
+
+repeat_range : covergroup_expression
+             | covergroup_expression ":" covergroup_expression
+
+cover_cross : (cross_identifier ":")? t_cross list_of_cross_items (t_iff "(" expression ")")? cross_body
+
+list_of_cross_items : cross_item "," cross_item ("," cross_item)*
+
+cross_item : cover_point_identifier
+           | variable_identifier
+
+cross_body : "{" (cross_body_item ";")* "}"
+           | ";"
+
+cross_body_item : function_declaration
+                | bins_selection_or_option ";"
+
+bins_selection_or_option : attribute_instance* coverage_option
+                         | attribute_instance* bins_selection
+
+bins_selection : bins_keyword bin_identifier "=" select_expression (t_iff "(" expression ")")?
+
+select_expression : select_condition
+                  | "!" select_condition
+                  | select_expression "&&" select_expression
+                  | select_expression "||" select_expression
+                  | "(" select_expression ")"
+                  | select_expression t_with "(" with_covergroup_expression ")" (t_matches integer_covergroup_expression)?
+                  | cross_identifier
+                  | cross_set_expression (t_matches integer_covergroup_expression)?
+
+select_condition : t_binsof "(" bins_expression ")" (t_intersect "{" covergroup_range_list "}")?
+
+bins_expression : variable_identifier
+                | cover_point_identifier ("." bin_identifier)?
+
+covergroup_range_list : covergroup_value_range ("," covergroup_value_range)*
+
+covergroup_value_range : covergroup_expression
+                       | "[" covergroup_expression ":" covergroup_expression "]"
+
+with_covergroup_expression : covergroup_expression
+
+set_covergroup_expression : covergroup_expression
+
+integer_covergroup_expression : covergroup_expression
+
+cross_set_expression : covergroup_expression
+
+covergroup_expression : expression
+
+
+// A.3 - Primitive Instances
+// skipping for now
+
+
+// A.4 - Instantiations
+// A.4.1 - Instantation
+// A.4.1.1 - Module Instantation
+module_instantiation : module_identifier parameter_value_assignment? hierarchical_instance ("," hierarchical_instance)* ";"
+
+parameter_value_assignment : "#" "(" list_of_parameter_assignments? ")"
+
+list_of_parameter_assignments : ordered_parameter_assignment ("," ordered_parameter_assignment)*
+                              | named_parameter_assignment ("," named_parameter_assignment)*
+
+ordered_parameter_assignment : param_expression
+
+named_parameter_assignment : "." parameter_identifier "(" param_expression? ")"
+
+hierarchical_instance : name_of_instance "(" list_of_port_connections ")"
+
+name_of_instance : instance_identifier unpacked_dimension*
+
+list_of_port_connections : ordered_port_connection ("," ordered_port_connection)*
+                         | named_port_connection ("," named_port_connection)*
+
+ordered_port_connection : attribute_instance* expression?
+
+named_port_connection : attribute_instance* "." port_identifier ("(" expression? ")")?
+                      | attribute_instance* ".*"
+
+
+// A.4.1.2 - Interface Instantiation
+interface_instantiation : interface_identifier parameter_value_assignment? hierarchical_instance ("," hierarchical_instance)* ";"
+
+
+// A.4.1.3 - Program Instantiation
+program_instantiation : program_identifier parameter_value_assignment? hierarchical_instance ("," hierarchical_instance)* ";"
+
+
+// A.4.1.4 - Checker Instantiation
+checker_instantiation : ps_checker_identifier name_of_instance "(" list_of_checker_port_connections ")" ";"
+
+list_of_checker_port_connections : ordered_checker_port_connection ("," ordered_checker_port_connection)*
+                                 | named_checker_port_connection ("," named_checker_port_connection)*
+
+ordered_checker_port_connection : attribute_instance* property_actual_arg?
+
+named_checker_port_connection : attribute_instance* "." formal_port_identifier ("(" property_actual_arg? ")")?
+                              | attribute_instance* ".*"
+
+
+// A.4.2 - Generated Instantiation
+generate_region : t_generate generate_item* t_endgenerate
+
+loop_generate_construct : t_for "(" genvar_initialization ";" genvar_expression ";" genvar_iteration ")" generate_block
+
+genvar_initialization : t_genvar? genvar_identifier "=" constant_expression
+
+genvar_iteration : genvar_identifier assignment_operator genvar_expression
+                 | inc_or_dec_operator genvar_identifier
+                 | genvar_identifier inc_or_dec_operator
+
+conditional_generate_construct : if_generate_construct
+                               | case_generate_construct
+
+if_generate_construct : t_if "(" constant_expression ")" generate_block (t_else generate_block)?
+
+case_generate_construct : t_case "(" constant_expression ")" case_generate_item case_generate_item* t_endcase
+
+case_generate_item : constant_expression ("," constant_expression)* ":" generate_block
+                   | t_default ":"? generate_block
+
+generate_block : generate_item
+               | (generate_block_identifier ":")? t_begin (":" generate_block_identifier)? generate_item* t_end (":" generate_block_identifier)?
+
+generate_item : module_or_generate_item
+              | interface_or_generate_item
+              | checker_or_generate_item
+
+
+// A.5 - UDP Declaration and Instantiation
+// Skipping
+
+
+// A.6 - Behavioral Assignments
+// A.6.1 - Continuous Assignment and Net Alias Statements
+continuous_assign : t_assign drive_strength? delay3? list_of_net_assignments ";"
+                  | t_assign delay_control? list_of_variable_assignments ";"
+
+list_of_net_assignments : net_assignment ("," net_assignment)*
+
+list_of_variable_assignments : variable_assignment ("," variable_assignment)*
+
+net_alias : t_alias net_lvalue "=" net_lvalue ("=" net_lvalue)* ";"
+
+net_assignment : net_lvalue "=" expression
+
+
+// A.6.2 - Procedural Blocks and Assignments
+initial_construct : t_initial statement_or_null
+
+always_construct : always_keyword statement
+
+always_keyword : t_always
+               | t_always_comb
+               | t_always_latch
+               | t_always_ff
+
+final_construct : t_final function_statement
+
+blocking_assignment : variable_lvalue "=" delay_or_event_control expression
+                    | nonrange_variable_lvalue "=" dynamic_array_new
+                    | (implicit_class_handle "." | class_scope | package_scope) hierarchical_variable_identifier select "!=" class_new
+                    | operator_assignment
+
+operator_assignment : variable_lvalue assignment_operator expression
+
+assignment_operator : "="
+                    | "+="
+                    | "-="
+                    | "*="
+                    | "/="
+                    | "%="
+                    | "&="
+                    | "|="
+                    | "^="
+                    | "<<="
+                    | ">>="
+                    | "<<<="
+                    | ">>>="
+
+nonblocking_assignment : variable_lvalue "<=" delay_or_event_control? expression
+
+procedural_continuous_assignment : t_assign variable_assignment
+                                 | t_deassign variable_lvalue
+                                 | t_force variable_assignment
+                                 | t_force net_assignment
+                                 | t_release variable_lvalue
+                                 | t_release net_lvalue
+
+variable_assignment : variable_lvalue "=" expression
+
+
+// A.6.3 - Parallel and Sequential Blocks
+action_block : statement_or_null
+             | statement? t_else statement_or_null
+
+seq_block : t_begin (":" block_identifier)? block_item_declaration* statement_or_null* t_end (":" block_identifier)?
+
+par_block : t_fork (":" block_identifier)? block_item_declaration* statement_or_null* join_keyword (":" block_identifier)?
+
+join_keyword : t_join
+             | t_join_any
+             | t_join_none
+
+
+// A.6.4 - Statements
+statement_or_null : statement
+                  | attribute_instance* ";"
+
+statement : (block_identifier ":")? attribute_instance* statement_item
+
+statement_item : blocking_assignment ";"
+               | nonblocking_assignment ";"
+               | procedural_continuous_assignment ";"
+               | case_statement
+               | conditional_statement
+               | inc_or_dec_expression ";"
+               | subroutine_call_statement
+               | disable_statement
+               | event_trigger
+               | loop_statement
+               | jump_statement
+               | par_block
+               | procedural_timing_control_statement
+               | seq_block
+               | wait_statement
+               | procedural_assertion_statement
+               | clocking_drive ";"
+               | randsequence_statement
+               | randcase_statement
+               | expect_property_statement
+
+function_statement : statement
+
+function_statement_or_null : function_statement
+                           | attribute_instance* ";"
+
+variable_identifier_list : variable_identifier ("," variable_identifier)*
+
+
+// A.6.5 - Timing Control Statements
+procedural_timing_control_statement : procedural_timing_control statement_or_null
+
+delay_or_event_control : delay_control
+                       | event_control
+                       | t_repeat "(" expression ")" event_control
+
+delay_control : "#" delay_value
+              | "#" "(" mintypmax_expression ")"
+
+event_control : "@" hierarchical_event_identifier
+              | "@" "(" event_expression ")"
+              | "@*"
+              | "@" "(*)"
+              | "@" ps_or_hierarchical_sequence_identifier
+
+event_expression : edge_identifier? expression (t_iff expression)?
+                 | sequence_instance (t_iff expression)?
+                 | event_expression t_or event_expression
+                 | event_expression "," event_expression
+                 | "(" event_expression ")"
+
+procedural_timing_control : delay_control
+                          | event_control
+                          | cycle_delay
+
+jump_statement : t_return expression? ";"
+               | t_break ";"
+               | t_continue ";"
+
+wait_statement : t_wait "(" expression ")" statement_or_null
+               | t_wait t_fork ";"
+               | t_wait_order "(" hierarchical_identifier ("," hierarchical_identifier)* ")" action_block
+
+event_trigger : "->" hierarchical_event_identifier ";"
+              | "->>" delay_or_event_control? hierarchical_event_identifier ";"
+
+disable_statement : t_disable hierarchical_task_identifier ";"
+                  | t_disable hierarchical_block_identifier ";"
+                  | t_disable t_fork ";"
+
+
+// A.6.6 - Conditional Statements
+conditional_statement : unique_priority? t_if "(" cond_predicate ")" statement_or_null (t_else t_if "(" cond_predicate ")" statement_or_null)* (t_else statement_or_null)?
+
+unique_priority : t_unique
+                | t_unique0
+                | t_priority
+
+cond_predicate : expression_or_cond_pattern ("&&&" expression_or_cond_pattern)*
+
+expression_or_cond_pattern : expression (t_matches pattern)?
+
+// A.6.7 - Case Statements
+case_statement : unique_priority? case_keyword "(" case_expression ")" case_item case_item* t_endcase
+               | unique_priority? case_keyword "(" case_expression ")" t_matches case_pattern_item case_pattern_item* t_endcase
+               | unique_priority? t_case "(" case_expression ")" t_inside case_inside_item case_inside_item* t_endcase
+
+case_keyword : t_case
+             | t_casez
+             | t_casex
+
+case_expression : expression
+
+case_item : case_item_expression ("," case_item_expression)* ":" statement_or_null
+          | t_default ":"? statement_or_null
+
+case_pattern_item : pattern ("&&&" expression)? ":" statement_or_null
+                  | t_default ":"? statement_or_null
+
+case_inside_item : open_range_list ":" statement_or_null
+                 |t_default ":"? statement_or_null
+
+case_item_expression : expression
+
+randcase_statement : t_randcase randcase_item randcase_item* t_endcase
+
+randcase_item : expression ":" statement_or_null
+
+open_range_list : open_value_range ("," open_value_range)*
+
+open_value_range : value_range
+
+
+// A.6.7.1 - Patterns
+pattern : "." variable_identifier
+        | ".*"
+        | constant_expression
+        | t_tagged member_identifier pattern?
+        | "\"{" pattern ("," pattern)* "}"
+        | "\"{" member_identifier ":" pattern ("," member_identifier ":" pattern)* "}"
+
+assignment_pattern : "\"{" expression ("," expression)* "}"
+                   | "\"{" structure_pattern_key ":" expression ("," structure_pattern_key ":" expression)* "}"
+                   | "\"{" array_pattern_key ":" expression ("," array_pattern_key ":" expression)* "}"
+                   | "\"{" constant_expression "{" expression ("," expression)* "}" "}"
+
+structure_pattern_key : member_identifier
+                      | assignment_pattern_key
+
+array_pattern_key : constant_expression
+                  | assignment_pattern_key
+
+assignment_pattern_key : simple_type
+                       | t_default
+
+assignment_pattern_expression : assignment_pattern_expression_type? assignment_pattern
+
+assignment_pattern_expression_type : ps_type_identifier
+                                   | ps_parameter_identifier
+                                   | integer_atom_type
+                                   | type_reference
+
+constant_assignment_pattern_expression : assignment_pattern_expression
+
+assignment_pattern_net_lvalue : "\"{" net_lvalue ("," net_lvalue)* "}"
+
+assignment_pattern_variable_lvalue : "\"{" variable_lvalue ("," variable_lvalue)* "}"
+
+// A.6.8 - Looping Statements
+loop_statement : t_forever statement_or_null
+               | t_repeat "(" expression ")" statement_or_null
+               | t_while "(" expression ")" statement_or_null
+               | t_for "(" for_initialization? ";" expression? ";" for_step? ")" statement_or_null
+               | t_do statement_or_null t_while "(" expression ")" ";"
+               | t_foreach "(" ps_or_hierarchical_array_identifier "[" loop_variables "]" ")" statement
+
+for_initialization : list_of_variable_assignments
+                   | for_variable_declaration ("," for_variable_declaration)*
+
+for_variable_declaration : t_var? data_type variable_identifier "=" expression ("," variable_identifier "=" expression)*
+
+for_step : for_step_assignment ("," for_step_assignment)*
+
+for_step_assignment : operator_assignment
+                    | inc_or_dec_expression
+                    | function_subroutine_call
+
+loop_variables : index_variable_identifier? ("," index_variable_identifier?)*
+
+// A.6.9 - Subroutine Call Statements
+subroutine_call_statement : subroutine_call ";"
+                          | t_void "\"" "(" function_subroutine_call ")" ";"
+
+
+// A.6.10 Assertion statements
+assertion_item : concurrent_assertion_item
+               | deferred_immediate_assertion_item
+
+deferred_immediate_assertion_item : (block_identifier ":")? deferred_immediate_assertion_statement
+
+procedural_assertion_statement : concurrent_assertion_statement
+                               | immediate_assertion_statement
+                               | checker_instantiation
+
+immediate_assertion_statement : simple_immediate_assertion_statement
+                              | deferred_immediate_assertion_statement
+
+simple_immediate_assertion_statement : simple_immediate_assert_statement
+                                     | simple_immediate_assume_statement
+                                     | simple_immediate_cover_statement
+
+simple_immediate_assert_statement : t_assert "(" expression ")" action_block
+
+simple_immediate_assume_statement : t_assume "(" expression ")" action_block
+
+simple_immediate_cover_statement : t_cover "(" expression ")" statement_or_null
+
+deferred_immediate_assertion_statement : deferred_immediate_assert_statement
+                                       | deferred_immediate_assume_statement
+                                       | deferred_immediate_cover_statement
+
+deferred_immediate_assert_statement : t_assert "#0" "(" expression ")" action_block
+                                    | t_assert t_final "(" expression ")" action_block
+
+deferred_immediate_assume_statement : t_assume "#0" "(" expression ")" action_block
+                                    | t_assume t_final "(" expression ")" action_block
+
+deferred_immediate_cover_statement : t_cover "#0" "(" expression ")" statement_or_null
+                                   | t_cover t_final "(" expression ")" statement_or_null
+
+
+// A.6.11 Clocking block
+clocking_declaration : t_default? t_clocking clocking_identifier? clocking_event ";" clocking_item* t_endclocking (":" clocking_identifier)?
+                     | t_global t_clocking clocking_identifier? clocking_event ";" t_endclocking (":" clocking_identifier)?
+
+clocking_event : "@" identifier
+               | "@" "(" event_expression ")"
+
+clocking_item : t_default default_skew ";"
+              | clocking_direction list_of_clocking_decl_assign ";"
+              | attribute_instance* assertion_item_declaration
+
+default_skew : t_input clocking_skew
+             | t_output clocking_skew
+             | t_input clocking_skew t_output clocking_skew
+
+clocking_direction : t_input clocking_skew?
+                   | t_output clocking_skew?
+                   | t_input clocking_skew? t_output clocking_skew?
+                   | t_inout
+
+list_of_clocking_decl_assign : clocking_decl_assign ("," clocking_decl_assign)*
+
+clocking_decl_assign : signal_identifier ("=" expression)?
+
+clocking_skew : edge_identifier delay_control?
+              | delay_control
+
+clocking_drive : clockvar_expression "<=" cycle_delay? expression
+
+cycle_delay : "##" integral_number
+            | "##" identifier
+            | "##" "(" expression ")"
+
+clockvar : hierarchical_identifier
+
+clockvar_expression : clockvar select
+
+
+// A.6.12 - Rand Sequence
+randsequence_statement : t_randsequence "(" production_identifier? ")" production+ t_endsequence
+
+production : data_type_or_void? production_identifier ("(" tf_port_list ")")? ":" rs_rule ("|" rs_rule)* ";"
+
+rs_rule : rs_production_list (":=" weight_specification rs_code_block?)?
+
+rs_production_list : rs_prod rs_prod*
+                   | t_rand t_join ("(" expression ")")? production_item production_item production_item*
+
+weight_specification : integral_number
+                     | ps_identifier "(" expression ")"
+
+rs_code_block : "{" data_declaration* statement_or_null* "}"
+
+rs_prod : production_item
+        | rs_code_block
+        | rs_if_else
+        | rs_repeat
+        | rs_case
+
+production_item : production_identifier ("(" list_of_arguments ")")?
+
+rs_if_else : t_if "(" expression ")" production_item (t_else production_item)?
+
+rs_repeat : t_repeat "(" expression ")" production_item
+
+rs_case : t_case "(" case_expression ")" rs_case_item rs_case_item* t_endcase
+
+rs_case_item : case_item_expression ("," case_item_expression)* ":" production_item ";"
+             | t_default ":"? production_item ";"
+
+
+// A.7 - Specify section
+// skipping all of this except for
+
+z_or_x : "x"
+       | "X"
+       | "z"
+       | "Z"
+
+// A.7.4 - Specify Path Delays
+edge_identifier : t_posedge
+                | t_negedge
+                | t_edge
+
+// A.8 - Expressions
+// A.8.1 - Concatenations
+concatenation : "{" expression ("," expression)* "}"
+
+constant_concatenation : "{" constant_expression ("," constant_expression)* "}"
+
+constant_multiple_concatenation : "{" constant_expression constant_concatenation "}"
+
+module_path_concatenation : "{" module_path_expression ("," module_path_expression)* "}"
+
+module_path_multiple_concatenation : "{" constant_expression module_path_concatenation "}"
+
+multiple_concatenation : "{" expression concatenation "}"
+
+streaming_concatenation : "{" stream_operator slice_size? stream_concatenation "}"
+
+stream_operator : ">>"
+                | "<<"
+
+slice_size : simple_type
+           | constant_expression
+
+stream_concatenation : "{" stream_expression ("," stream_expression)* "}"
+
+stream_expression : expression (t_with "[" array_range_expression "]")?
+
+array_range_expression : expression
+                       | expression ":" expression
+                       | expression "+:" expression
+                       | expression "-:" expression
+
+empty_queue : "{" "}"
+
+
+// A.8.2 - Subroutine Calls
+constant_function_call : function_subroutine_call
+
+tf_call : ps_or_hierarchical_tf_identifier attribute_instance* ("(" list_of_arguments ")")?
+
+system_tf_call : system_tf_identifier ("(" list_of_arguments ")")?
+               | system_tf_identifier "(" data_type ("," expression)? ")"
+
+subroutine_call : tf_call
+                | system_tf_call
+                | method_call
+                | "std::" randomize_call
+
+function_subroutine_call : subroutine_call
+
+list_of_arguments : expression? ("," expression?)* ("," "." identifier "(" expression? ")")*
+                  | "." identifier "(" expression? ")" ("," "." identifier "(" expression? ")")*
+
+method_call : method_call_root "." method_call_body
+
+method_call_body : method_identifier attribute_instance* ("(" list_of_arguments ")")?
+                 | built_in_method_call
+
+built_in_method_call : array_manipulation_call
+                     | randomize_call
+
+array_manipulation_call : array_method_name attribute_instance* ("(" list_of_arguments ")")? (t_with "(" expression ")")?
+
+randomize_call : t_randomize attribute_instance* ("(" (variable_identifier_list | t_null)? ")")? (t_with ("(" identifier_list? ")")? constraint_block )?
+
+method_call_root : primary
+                 | implicit_class_handle
+
+array_method_name : method_identifier
+                  | "unique"
+                  | "and"
+                  | "or"
+                  | "xor"
+
+
+// A.8.3 - Expressions
+inc_or_dec_expression : inc_or_dec_operator attribute_instance* variable_lvalue
+                      | variable_lvalue attribute_instance* inc_or_dec_operator
+
+conditional_expression : cond_predicate "?" attribute_instance* expression ":" expression
+
+constant_expression : constant_primary
+                    | unary_operator attribute_instance* constant_primary
+                    | constant_expression binary_operator attribute_instance* constant_expression
+                    | constant_expression "?" attribute_instance* constant_expression ":" constant_expression
+
+constant_mintypmax_expression : constant_expression
+                              | constant_expression ":" constant_expression ":" constant_expression
+
+constant_param_expression : constant_mintypmax_expression
+                          | data_type
+                          | "$"
+
+param_expression : mintypmax_expression
+                 | data_type
+                 | "$"
+
+constant_range_expression : constant_expression
+                          | constant_part_select_range
+
+constant_part_select_range : constant_range
+                           | constant_indexed_range
+
+constant_range : constant_expression ":" constant_expression
+
+constant_indexed_range : constant_expression "+:" constant_expression
+                       | constant_expression "-:" constant_expression
+
+expression : (primary | unary_operator attribute_instance* primary | inc_or_dec_expression | "(" operator_assignment ")" | tagged_union_expression) (binary_operator attribute_instance* expression | conditional_expression | inside_expression)*
+
+tagged_union_expression : t_tagged member_identifier expression?
+
+inside_expression : expression t_inside "{" open_range_list "}"
+
+value_range : expression
+            | "[" expression ":" expression "]"
+
+mintypmax_expression : expression
+                     | expression ":" expression ":" expression
+
+module_path_expression : (module_path_primary | unary_module_path_operator attribute_instance* module_path_primary) (binary_module_path_operator attribute_instance* module_path_expression | "?" attribute_instance* module_path_expression ":" module_path_expression)*
+
+module_path_mintypmax_expression : module_path_expression
+                                 | module_path_expression ":" module_path_expression ":" module_path_expression
+
+part_select_range : constant_range
+                  | indexed_range
+
+indexed_range : expression "+:" constant_expression
+              | expression "-:" constant_expression
+
+genvar_expression : constant_expression
+
+
+// A.8.4 - Primaries
+constant_primary : ( primary_literal
+                   | ps_parameter_identifier constant_select
+                   | specparam_identifier ("[" constant_range_expression "]")?
+                   | genvar_identifier
+                   | formal_port_identifier constant_select
+                   | (package_scope | class_scope)? enum_identifier
+                   | constant_concatenation ("[" constant_range_expression "]")?
+                   | constant_multiple_concatenation ("[" constant_range_expression "]")?
+                   | constant_function_call
+                   | constant_let_expression
+                   | "(" constant_mintypmax_expression ")"
+                   | constant_assignment_pattern_expression
+                   | type_reference ) constant_cast*
+
+
+module_path_primary : number
+                    | identifier
+                    | module_path_concatenation
+                    | module_path_multiple_concatenation
+                    | function_subroutine_call
+                    | "(" module_path_mintypmax_expression ")"
+
+primary : ( primary_literal
+          | (class_qualifier | package_scope) hierarchical_identifier select
+          | empty_queue
+          | concatenation ("[" range_expression "]")?
+          | multiple_concatenation ("[" range_expression "]")?
+          | let_expression
+          | "(" mintypmax_expression ")"
+          | assignment_pattern_expression
+          | streaming_concatenation
+          | sequence_method_call
+          | t_this
+          | "$"
+          | t_null ) (function_subroutine_call | cast)*
+
+class_qualifier : "local::"? (implicit_class_handle "." | class_scope)?
+
+range_expression : expression
+                 | part_select_range
+
+primary_literal : number
+                | time_literal
+                | unbased_unsized_literal
+                | stringliteral
+
+time_literal : unsigned_number time_unit
+             | fixed_point_number time_unit
+
+time_unit : "s"
+          | "ms"
+          | "us"
+          | "ns"
+          | "ps"
+          | "fs"
+
+implicit_class_handle : t_this
+                      | t_super
+                      | t_this "." t_super
+
+bit_select : ("[" expression "]")*
+
+select : (("." member_identifier bit_select)? "." member_identifier)? bit_select ("[" part_select_range "]")?
+
+nonrange_select : (("." member_identifier bit_select)* "." member_identifier)? bit_select
+
+constant_bit_select : ("[" constant_expression "]")*
+
+constant_select : (("." member_identifier constant_bit_select)* "." member_identifier)? constant_bit_select ("[" constant_part_select_range "]")?
+
+constant_cast : casting_type "\"" "(" constant_expression ")"
+
+constant_let_expression : let_expression
+
+cast : casting_type "\"" "(" expression ")"
+
+
+// A.8.5 Expression left-side values
+net_lvalue : ps_or_hierarchical_net_identifier constant_select
+           | "{" net_lvalue ("," net_lvalue)* "}"
+           | assignment_pattern_expression_type? assignment_pattern_net_lvalue
+
+variable_lvalue : (implicit_class_handle "." | package_scope)? hierarchical_variable_identifier select
+                | "{" variable_lvalue ("," variable_lvalue)* "}"
+                | assignment_pattern_expression_type? assignment_pattern_variable_lvalue
+                | streaming_concatenation
+
+nonrange_variable_lvalue : (implicit_class_handle "." | package_scope)? hierarchical_variable_identifier nonrange_select
+
+
+// A.8.6 - Operators
+unary_operator : "+"
+               | "-"
+               | "!"
+               | "~"
+               | "&"
+               | "~&"
+               | "|"
+               | "~|"
+               | "^"
+               | "~^"
+               | "^~"
+
+binary_operator : "+"
+                | "-"
+                | "*"
+                | "/"
+                | "%"
+                | "=="
+                | "!="
+                | "==="
+                | "!=="
+                | "==?"
+                | "!=?"
+                | "&&"
+                | "||"
+                | "**"
+                | "<"
+                | "<="
+                | ">"
+                | ">="
+                | "&"
+                | "|"
+                | "^"
+                | "^~"
+                | "~^"
+                | ">>"
+                | "<<"
+                | ">>>"
+                | "<<<"
+                | "->"
+                | "<->"
+
+inc_or_dec_operator : "++"
+                    | "--"
+
+unary_module_path_operator : "!"
+                           | "~"
+                           | "&"
+                           | "~&"
+                           | "|"
+                           | "~|"
+                           | "^"
+                           | "~^"
+                           | "^~"
+
+binary_module_path_operator : "=="
+                            | "!="
+                            | "&&"
+                            | "||"
+                            | "&"
+                            | "|"
+                            | "^"
+                            | "^~"
+                            | "~^"
+
+
+// A.8.7 - Numbers
+
+number : integral_number
+       | real_number
+
+integral_number : decimal_number
+                | octal_number
+                | binary_number
+                | hex_number
+
+decimal_number : unsigned_number
+               | size? decimal_base unsigned_number
+               | size? decimal_base x_digit "_"*
+               | size? decimal_base z_digit "_"*
+
+binary_number : size? binary_base binary_value
+
+octal_number : size? octal_base octal_value
+
+hex_number : size? hex_base hex_value
+
+sign : "+"
+     | "-"
+
+size : non_zero_unsigned_number
+
+non_zero_unsigned_number : non_zero_decimal_digit ("_" | decimal_digit)*
+
+real_number : fixed_point_number
+            | unsigned_number ("." unsigned_number)? exp sign? unsigned_number
+
+fixed_point_number : unsigned_number "." unsigned_number
+
+exp : "e"
+    | "E"
+
+unsigned_number : decimal_digit ("_" | decimal_digit)*
+
+binary_value : binary_digit ("_" | binary_digit)*
+
+octal_value : octal_digit ("_" | octal_digit)*
+
+hex_value : hex_digit ("_" | hex_digit)*
+
+decimal_base : "'" ("s" | "S")? ("d" | "D")
+
+binary_base : "'" ("s" | "S")? ("b" | "B")
+
+octal_base : "'" ("s" | "S")? ("o" | "O")
+
+hex_base : "'" ("s" | "S")? ("h" | "H")
+
+non_zero_decimal_digit : "1"
+                       | "2"
+                       | "3"
+                       | "4"
+                       | "5"
+                       | "6"
+                       | "7"
+                       | "8"
+                       | "9"
+
+decimal_digit : "0"
+              | "1"
+              | "2"
+              | "3"
+              | "4"
+              | "5"
+              | "6"
+              | "7"
+              | "8"
+              | "9"
+
+binary_digit : x_digit
+             | z_digit
+             | "0"
+             | "1"
+
+octal_digit : x_digit
+            | z_digit
+            | "0"
+            | "1"
+            | "2"
+            | "3"
+            | "4"
+            | "5"
+            | "6"
+            | "7"
+
+hex_digit : x_digit
+          | z_digit
+          | "0"
+          | "1"
+          | "2"
+          | "3"
+          | "4"
+          | "5"
+          | "6"
+          | "7"
+          | "8"
+          | "9"
+          | "a"
+          | "b"
+          | "c"
+          | "d"
+          | "e"
+          | "f"
+          | "A"
+          | "B"
+          | "C"
+          | "D"
+          | "E"
+          | "F"
+
+x_digit : "x"
+        | "X"
+
+z_digit : "z"
+        | "Z"
+        | "?"
+
+unbased_unsized_literal : "'0"
+                        | "'1"
+                        | "'" z_or_x
+
+
+// A.8.8 - Strings
+//stringliteral : "\"" ("\\". | [^\\"])* "\""
+stringliteral : /"(\\.|[^\\"])*"/
+
+// A.9 - General
+// A.9.1 - Attributes
+attribute_instance : "(*" attr_spec ("," attr_spec)* "*)"
+
+attr_spec : attr_name ("=" constant_expression)?
+
+attr_name : identifier
+
+
+// A.9.2 - Comments
+COMMENT : ONE_LINE_COMMENT
+        | BLOCK_COMMENT
+%ignore COMMENT
+
+ONE_LINE_COMMENT : "//" COMMENT_TEXT NEW_LINE_CHAR
+
+BLOCK_COMMENT : "/*" COMMENT_TEXT "*/"
+
+COMMENT_TEXT :  ANY_ASCII_CHARACTER*
+
+NEW_LINE_CHAR: /[\r\n]/
+ANY_ASCII_CHARACTER: /./
+
+%ignore NEW_LINE_CHAR
+
+// A.9.3 - Identifiers
+?array_identifier : identifier
+?block_identifier : identifier
+?bin_identifier : identifier
+?cell_identifier : identifier
+?checker_identifier : identifier
+?class_identifier : identifier
+?class_variable_identifier : variable_identifier
+?clocking_identifier : identifier
+?config_identifier : identifier
+?const_identifier : identifier
+?constraint_identifier : identifier
+?covergroup_identifier : identifier
+?covergroup_variable_identifier : variable_identifier
+?cover_point_identifier : identifier
+?cross_identifier : identifier
+?dynamic_array_variable_identifier : variable_identifier
+?enum_identifier : identifier
+
+// escaped_identifier : "\" { any_printable_ASCII_character_except_white_space } WHITESPACE
+//
+
+?formal_identifier : identifier
+?formal_port_identifier : identifier
+?function_identifier : identifier
+?generate_block_identifier : identifier
+?genvar_identifier : identifier
+?hierarchical_array_identifier : hierarchical_identifier
+?hierarchical_block_identifier : hierarchical_identifier
+?hierarchical_event_identifier : hierarchical_identifier
+?hierarchical_identifier : ("$root" ".")? (identifier constant_bit_select ".")* identifier
+?hierarchical_net_identifier : hierarchical_identifier
+?hierarchical_parameter_identifier : hierarchical_identifier
+?hierarchical_property_identifier : hierarchical_identifier
+?hierarchical_sequence_identifier : hierarchical_identifier
+?hierarchical_task_identifier : hierarchical_identifier
+?hierarchical_tf_identifier : hierarchical_identifier
+?hierarchical_variable_identifier : hierarchical_identifier
+
+?identifier : system_identifier
+//            | escaped_identifier
+
+?index_variable_identifier : identifier
+?interface_identifier : identifier
+?interface_instance_identifier : identifier
+?inout_port_identifier : identifier
+?input_port_identifier : identifier
+?instance_identifier : identifier
+?library_identifier : identifier
+?member_identifier : identifier
+?method_identifier : identifier
+?modport_identifier : identifier
+?module_identifier : identifier
+?net_identifier : identifier
+?net_type_identifier : identifier
+?output_port_identifier : identifier
+?package_identifier : identifier
+
+package_scope : package_identifier "::"
+              | "$unit::"
+
+?parameter_identifier : identifier
+?port_identifier : identifier
+?production_identifier : identifier
+?program_identifier : identifier
+?property_identifier : identifier
+?ps_class_identifier : package_scope? class_identifier
+?ps_covergroup_identifier : package_scope? covergroup_identifier
+?ps_checker_identifier : package_scope? checker_identifier
+?ps_identifier : package_scope? identifier
+
+ps_or_hierarchical_array_identifier : implicit_class_handle "." hierarchical_array_identifier
+                                    | class_scope hierarchical_array_identifier
+                                    | package_scope hierarchical_array_identifier
+                                    | hierarchical_array_identifier
+
+ps_or_hierarchical_net_identifier : package_scope? net_identifier
+                                  | hierarchical_net_identifier
+
+ps_or_hierarchical_property_identifier : package_scope? property_identifier
+                                       | hierarchical_property_identifier
+
+ps_or_hierarchical_sequence_identifier : package_scope? sequence_identifier
+                                       | hierarchical_sequence_identifier
+
+ps_or_hierarchical_tf_identifier : package_scope? tf_identifier
+                                 | hierarchical_tf_identifier
+
+ps_parameter_identifier : package_scope parameter_identifier
+                        | class_scope parameter_identifier
+                        | parameter_identifier
+                        | (generate_block_identifier ("[" constant_expression "]")? ".")* parameter_identifier
+
+ps_type_identifier : "local::" type_identifier
+                   | package_scope type_identifier
+                   | type_identifier
+
+?sequence_identifier : identifier
+?signal_identifier : identifier
+?specparam_identifier : identifier
+?task_identifier : identifier
+?tf_identifier : identifier
+?terminal_identifier : identifier
+?topmodule_identifier : identifier
+?type_identifier : identifier
+?udp_identifier : identifier
+?variable_identifier : identifier
+
+
+// Keyword/Literal Tokenization
+WHITESPACE : /[ \t\r\n]/
+%ignore WHITESPACE
+
+t_1step : "1step"
+
+t_accept_on : "accept_on"
+
+t_alias : "alias"
+
+t_always_comb : "always_comb"
+
+t_always_ff : "always_ff"
+
+t_always_latch : "always_latch"
+
+t_always : "always"
+
+t_and : "and"
+
+t_assert : "assert"
+
+t_assign : "assign"
+
+t_assume : "assume"
+
+t_automatic : "automatic"
+
+t_before : "before"
+
+t_begin : "begin"
+
+t_bind : "bind"
+
+t_binsof : "binsof"
+
+t_bins : "bins"
+
+t_bit : "bit"
+
+t_break : "break"
+
+t_bufif0 : "bufif0"
+
+t_bufif1 : "bufif1"
+
+t_buf : "buf"
+
+t_byte : "byte"
+
+t_case : "case"
+
+t_casex : "casex"
+
+t_casez : "casez"
+
+t_cell : "cell"
+
+t_chandle : "chandle"
+
+t_checker : "checker"
+
+t_class : "class"
+
+t_clocking : "clocking"
+
+t_cmos : "cmos"
+
+t_config : "config"
+
+t_constraint : "constraint"
+
+t_const : "const"
+
+t_context : "context"
+
+t_continue : "continue"
+
+t_covergroup : "covergroup"
+
+t_coverpoint : "coverpoint"
+
+t_cover : "cover"
+
+t_cross : "cross"
+
+t_deassign : "deassign"
+
+t_default : "default"
+
+t_defparam : "defparam"
+
+t_design : "design"
+
+t_disable : "disable"
+
+t_dist : "dist"
+
+t_do : "do"
+
+t_dpi : "\"DPI\""
+
+t_dpic : "\"DPI-C\""
+
+t_edge : "edge"
+
+t_else : "else"
+
+t_endcase : "endcase"
+
+t_endchecker : "endchecker"
+
+t_endclass : "endclass"
+
+t_endclocking : "endclocking"
+
+t_endconfig : "endconfig"
+
+t_endfunction : "endfunction"
+
+t_endgenerate : "endgenerate"
+
+t_endgroup : "endgroup"
+
+t_endinterface : "endinterface"
+
+t_endmodule : "endmodule"
+
+t_endpackage : "endpackage"
+
+t_endprimitive : "endprimitive"
+
+t_endprogram : "endprogram"
+
+t_endproperty : "endproperty"
+
+t_endspecify : "endspecify"
+
+t_endsequence : "endsequence"
+
+t_endtable : "endtable"
+
+t_endtask : "endtask"
+
+t_end : "end"
+
+t_enum : "enum"
+
+t_eventually : "eventually"
+
+t_event : "event"
+
+t_expect : "expect"
+
+t_export : "export"
+
+t_extends : "extends"
+
+t_extern : "extern"
+
+t_final : "final"
+
+t_first_match : "first_match"
+
+t_force : "force"
+
+t_foreach : "foreach"
+
+t_forever : "forever"
+
+t_forkjoin : "forkjoin"
+
+t_fork : "fork"
+
+t_for : "for"
+
+t_function : "function"
+
+t_generate : "generate"
+
+t_genvar : "genvar"
+
+t_global : "global"
+
+t_highz0 : "highz0"
+
+t_highz1 : "highz1"
+
+t_iff : "iff"
+
+t_ifnone : "ifnone"
+
+t_if : "if"
+
+t_ignore_bins : "ignore_bins"
+
+t_illegal_bins : "illegal_bins"
+
+t_implements : "implements"
+
+t_implies : "implies"
+
+t_import : "import"
+
+t_incdir : "incdir"
+
+t_include : "include"
+
+t_initial : "initial"
+
+t_inout : "inout"
+
+t_input : "input"
+
+t_inside : "inside"
+
+t_instance : "instance"
+
+t_integer : "integer"
+
+t_interconnect : "interconnect"
+
+t_interface : "interface"
+
+t_intersect : "intersect"
+
+t_int : "int"
+
+t_join_any : "join_any"
+
+t_join_none : "join_none"
+
+t_join : "join"
+
+t_large : "large"
+
+t_let : "let"
+
+t_liblist : "liblist"
+
+t_library : "library"
+
+t_local : "local"
+
+t_localparam : "localparam"
+
+t_logic : "logic"
+
+t_longint : "longint"
+
+t_macromodule : "macromodule"
+
+t_matches : "matches"
+
+t_medium : "medium"
+
+t_modport : "modport"
+
+t_module : "module"
+
+t_nand : "nand"
+
+t_negedge : "negedge"
+
+t_nettype : "nettype"
+
+t_new : "new"
+
+t_nexttime : "nexttime"
+
+t_nmos : "nmos"
+
+t_nor : "nor"
+
+t_noshowcancelled : "noshowcancelled"
+
+t_notif0 : "notif0"
+
+t_notif1 : "notif1"
+
+t_not : "not"
+
+t_null : "null"
+
+t_option : "option"
+
+t_or : "or"
+
+t_output : "output"
+
+t_package : "package"
+
+t_packed : "packed"
+
+t_parameter : "parameter"
+
+t_pathpulse : "PATHPULSE$"
+
+t_pmos : "pmos"
+
+t_posedge : "posedge"
+
+t_primitive : "primitive"
+
+t_priority : "priority"
+
+t_program : "program"
+
+t_property : "property"
+
+t_protected : "protected"
+
+t_pull0 : "pull0"
+
+t_pull1 : "pull1"
+
+t_pulldown : "pulldown"
+
+t_pullup : "pullup"
+
+t_pulsestyle_ondetect : "pulsestyle_ondetect"
+
+t_pulsestyle_onevent : "pulsestyle_onevent"
+
+t_pure : "pure"
+
+t_randcase : "randcase"
+
+t_randc : "randc"
+
+t_randsequence : "randsequence"
+
+t_randomize : "randomize"
+
+t_rand : "rand"
+
+t_rcmos : "rcmos"
+
+t_real : "real"
+
+t_realtime : "realtime"
+
+t_ref : "ref"
+
+t_reg : "reg"
+
+t_reject_on : "reject_on"
+
+t_release : "release"
+
+t_repeat : "repeat"
+
+t_restrict : "restrict"
+
+t_return : "return"
+
+t_rnmos : "rnmos"
+
+t_rpmos : "rpmos"
+
+t_rtranif0 : "rtranif0"
+
+t_rtranif1 : "rtranif1"
+
+t_rtran : "rtran"
+
+t_sample : "sample"
+
+t_s_always : "s_always"
+
+t_s_eventually : "s_eventually"
+
+t_s_nexttime : "s_nexttime"
+
+t_s_until : "s_until"
+
+t_s_until_with : "s_until_with"
+
+t_scalared : "scalared"
+
+t_sequence : "sequence"
+
+t_shortint : "shortint"
+
+t_shortreal : "shortreal"
+
+t_showcancelled : "showcancelled"
+
+t_signed : "signed"
+
+t_small : "small"
+
+t_soft : "soft"
+
+t_solve : "solve"
+
+t_specify : "specify"
+
+t_specparam : "specparam"
+
+t_static : "static"
+
+t_string : "string"
+
+t_strong0 : "strong0"
+
+t_strong1 : "strong1"
+
+t_strong : "strong"
+
+t_struct : "struct"
+
+t_super : "super"
+
+t_supply0 : "supply0"
+
+t_supply1 : "supply1"
+
+t_sync_accept_on : "sync_accept_on"
+
+t_sync_reject_on : "sync_reject_on"
+
+t_table : "table"
+
+t_tagged : "tagged"
+
+t_task : "task"
+
+t_this : "this"
+
+t_throughout : "throughout"
+
+t_time : "time"
+
+t_timeprecision : "timeprecision"
+
+t_timeunit : "timeunit"
+
+t_tranif0 : "tranif0"
+
+t_tranif1 : "tranif1"
+
+t_tran : "tran"
+
+t_tri0 : "tri0"
+
+t_tri1 : "tri1"
+
+t_triand : "triand"
+
+t_trior : "trior"
+
+t_trireg : "trireg"
+
+t_tri : "tri"
+
+t_typedef : "typedef"
+
+t_type_option : "type_option"
+
+t_type : "type"
+
+t_union : "union"
+
+t_unique0 : "unique0"
+
+t_unique : "unique"
+
+t_unsigned : "unsigned"
+
+t_until_with : "until_with"
+
+t_until : "until"
+
+t_untyped : "untyped"
+
+t_use : "use"
+
+t_uwire : "uwire"
+
+t_var : "var"
+
+t_vectored : "vectored"
+
+t_virtual : "virtual"
+
+t_void : "void"
+
+t_wait_order : "wait_order"
+
+t_wait : "wait"
+
+t_wand : "wand"
+
+t_weak0 : "weak0"
+
+t_weak1 : "weak1"
+
+t_weak : "weak"
+
+t_while : "while"
+
+t_wildcard : "wildcard"
+
+t_wire : "wire"
+
+t_within : "within"
+
+t_with : "with"
+
+t_wor : "wor"
+
+t_xnor : "xnor"
+
+t_xor : "xor"
+
+system_tf_identifier : /"$"[a-zA-Z0-9_$][a-zA-Z0-9_$]*/
+
+system_identifier : /[a-zA-Z_][a-zA-Z0-9_$]*/
+
+c_identifier : /[a-zA-Z_][a-zA-Z0-9_]*/
