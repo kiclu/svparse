@@ -1,12 +1,35 @@
-from lark import Tree
-from lark.visitors import Transformer
+import pyslang
 
-class SVDeclaration(Transformer):
+class SVDeclaration:
 
     _name: str
-    _data: dict
+    _header: pyslang.ModuleHeaderSyntax
+    _imports: set
 
-    def __init__(self, tree: Tree):
-        super().__init__()
+    def __init__(self):
         self._name = None
-        self._data = self.transform(tree)
+
+    def parse(self):
+        pass
+
+    def __parse_parameters__(self, params: pyslang.ParameterPortListSyntax):
+        for paramlist in params:
+            if type(paramlist) is pyslang.SyntaxNode:
+                for param in paramlist:
+                    self.__parse_parameter__(param)
+
+    def __parse_parameter__(self, param):
+        # pyslang.ParameterDeclarationSyntax
+        if type(param) is pyslang.Token: return
+        print(type(param))
+
+    def __parse_ports__(self, ports: pyslang.PortListSyntax):
+        for portlist in ports:
+            if type(portlist) is pyslang.SyntaxNode:
+                for port in portlist:
+                    self.__parse_port__(port)
+
+    def __parse_port__(self, port):
+        # pyslang.ImplicitAnsiPortSyntax
+        if type(port) is pyslang.Token: return
+        print(type(port))

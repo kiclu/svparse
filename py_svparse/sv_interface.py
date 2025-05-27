@@ -1,12 +1,11 @@
-
-from lark import Tree
 from .sv_declaration import SVDeclaration
 
+import pyslang
 
 class SVInterface(SVDeclaration):
 
-    def __init__(self, tree: Tree):
-        super.__init__(tree)
+    def __init__(self):
+        super.__init__()
 
-    def interface_declaration(self, _):
-        return None
+    def parse(self, node: pyslang.ModuleDeclarationSyntax):
+        pass

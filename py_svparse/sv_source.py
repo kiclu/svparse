@@ -1,35 +1,39 @@
+from .sv_declaration import SVDeclaration
 from .sv_module import SVModule
 from .sv_interface import SVInterface
 
-from lark import Tree
 from pathlib import Path
 
-from .lark.sv_parser import SVParser
+import pyslang
 
 class SVSource:
 
-    _path: Path
-    _parser: SVParser
-    _descriptions: list
+    _source: Path
+    _tree: pyslang.SyntaxTree
+    _members: list[SVDeclaration]
 
     def __init__(self, source: Path):
-        self._path = source
-        self._parser = SVParser()
-        self._descriptions = []
+        self._source = source
+        self._tree = pyslang.SyntaxTree.fromFile(self._source)
+        self._members = []
         self.__parse__()
-        for i in self._descriptions:
-            print(i._data)
 
     def __parse__(self):
-        tree = self._parser.parse(self._path).children
-        for st in tree:
-            if st.data == "module_declaration":
-                self.__parse_module__(st)
-            elif st.data == "interface_declaration":
-                self.__parse_interface__(st)
+        for i in self._tree.root.members:
+            if type(i) is pyslang.ModuleDeclarationSyntax:
+                self.__parse_module_declaration_syntax__(i)
+            elif type(i) is pyslang.ClassDeclarationSyntax:
+                print("class")
+            else:
+                raise Exception("Unsupported SyntaxNode type")
 
-    def __parse_module__(self, st: Tree):
-        self._descriptions.append(SVModule(st))
-
-    def __parse_interface__(self, st: Tree):
-        self._descriptions.append(SVInterface(st))
+    def __parse_module_declaration_syntax__(self, node: pyslang.ModuleDeclarationSyntax):
+        if node.kind == pyslang.SyntaxKind.ModuleDeclaration:
+            print("module %s" % node.header.name)
+            self._members.append(SVModule(node))
+        elif node.kind == pyslang.SyntaxKind.InterfaceDeclaration:
+            print("interface %s" % node.header.name)
+        elif node.kind == pyslang.SyntaxKind.PackageDeclaration:
+            print("package %s" % node.header.name)
+        else:
+            raise Exception("Unsupported ModuleDeclarationSyntax kind")
